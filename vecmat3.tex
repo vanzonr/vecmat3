@@ -1,0 +1,951 @@
+%
+% vecmat3.tex - LaTeX documentation source for vecmat3.h version 2.3.1: 
+%               Fast 3d vector and matrix classes using expression templates
+%
+% Copyright (c) 2007-2013  Ramses van Zon
+%
+% Permission is hereby granted, free of charge, to any person obtaining a copy
+% of this software and associated documentation files (the "Software"), to deal
+% in the Software without restriction, including without limitation the rights
+% to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+% copies of the Software, and to permit persons to whom the Software is
+% furnished to do so, subject to the following conditions:
+%
+% The above copyright notice and this permission notice shall be included in
+% all copies or substantial portions of the Software.
+%
+% THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+% IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+% FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+% AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+% LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+% OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+% THE SOFTWARE.
+%
+
+\documentclass[12pt,twoside]{article}
+
+\usepackage{a4wide,fancyhdr,mathptm,charter,color}
+%\usepackage[colorlinks]{hyperref}
+
+\pagestyle{fancy}
+\renewcommand{\sectionmark}[1]{\markright{#1}}
+\fancyhf{}
+\fancyhead[LE,RO]{\bfseries\thepage}
+\fancyhead[LO]{\bfseries \hfill\rightmark\hfill}
+\fancyhead[RE]{\hfill\bfseries\rightmark \hfill}
+\fancyfoot[L]{\textit{vecmat3} v2.3.1}
+\fancyfoot[R]{\hfill{\color{white}.}\hfill Ramses van Zon\hfill May 15, 2013}
+\renewcommand{\headrulewidth}{0.5pt}
+\renewcommand{\footrulewidth}{0pt}
+\addtolength{\headheight}{2.5pt}
+\fancypagestyle{plain}{\fancyhead{}\renewcommand{\headrulewidth}{0pt}}
+
+
+\newcommand{\Vector}{{Vector}}
+\newcommand{\Matrix}{{Matrix}}
+\newcommand{\cxx}{C\texttt{++}}
+\newcommand{\TT}{{\tt<}T{\tt>}}
+
+\begin{document}
+
+\setlength{\parskip}{1mm}
+
+\title{User Documentation for the  \emph{vecmat3}\\\Vector\ and
+  \Matrix\ classes\\(version 2.3.1)}
+
+\author{Ramses van Zon\footnote{vanzonr@gmail.com}}
+
+\date{May 15, 2013}
+
+\maketitle
+\begin{abstract}
+This document describes how to use the \cxx\ \Vector\ and
+\Matrix\ classes defined in the header file vecmat3.h. These classes
+offer a very convenient notation for three dimensional vector and
+matrix algebra by using overloaded operators.  Furthermore, they are
+constructed to be numerically efficient through the internal use of
+expression templates, without interfering at the user level.  As a
+result, one can convert mathematical matrix-vector expressions
+straightforwardly into the corresponding \cxx\ expression without
+having to worry about incurring an efficiency penalty.
+\end{abstract}
+
+\newpage
+
+\renewcommand{\contentsname}{\vspace{-13mm}}\markright{Contents}
+\tableofcontents
+
+\newpage
+
+\section{Introduction}
+Vectors and matrices are used frequently in scientific computation (as
+well as in modeling, games and movie rendering).  Unfortunately, no
+built-in support for matrices and vectors exists in \cxx.  In
+principle, expressions involving matrices and vectors, such as
+\[
+\vec a=\vec b+\mathsf M \cdot \vec c
+\]
+(with $\vec a$, $\vec b$ and $\vec c$ vectors and $\mathsf M$ a
+matrix) can be implemented in \cxx\
+such that they strongly resemble their mathematical notations, e.g.
+\begin{quote}
+\tt
+Vector a,b;
+
+Matrix M;
+
+Vector c = a + M*b;
+\end{quote}
+The technique used to accomplish such notational convenience is
+operator overloading, whose straightforward implementation comes with
+a high computational cost due to the creation of temporary
+objects.
+
+A more efficient implementation is possible by using \emph{expression
+templates}.  Efficient matrix-vector implementations are somewhat of a
+by-product of \cxx\ templates, and this shows in the awkward and
+complicated notation needed for general matrix-vector
+manipulations. In addition, the \cxx\ standard is somewhat quirky on
+what is and is not allowed when using templates.
+
+These notational issues probably explain why there are far fewer
+template-based implementations of matrices and vectors available.
+This is especially problematic for small vectors and matrices of fixed
+size, for instance three-dimensional ones. These allow additional
+efficiency gains over general-size vectors and matrices (because loops
+over indices can be replaced by explicit sums in the implementation).
+Two known implementations are the \texttt{TinyVector} and \texttt{
+TinyMatrix} classes of \texttt{Blitz++} and the ones by the same name of
+\texttt{tvmet}. The former is not very developed, i.e., many operations
+that one would like to have are not present, and indeed, the latter is
+aimed at fixing that. Still, \texttt{tvmet} lacks some functionality that
+built-in types do have, for instance, \texttt{TinyVector<3,double> v =
+a+b;} is not possible.
+
+This is where \emph{vecmat3} comes in. It defines very efficient
+three dimensional vector and matrix manipulations.  The aim is to be
+able to use these vectors and matrices as if they were built-in types,
+with which the same kind of expressions can be formed as can with
+built-in types without worrying about template techniques, but also without
+substantial losses compared to hard-coded element-by-element
+techniques.
+
+\emph{vecmat3} uses expression templates and operator
+overloading. The restrictions of vecmat3 at present are that the
+elements of the vectors and matrices have to be of a single type,
+which is \texttt{double} by default, and that only three-dimensional
+quantities are supported (as the name suggests).
+
+\section*{Change history}
+\subsection*{Changes in version 2}
+
+The main difference between the first version of vecmat3 and the
+second is that the matrices and vectors no longer need to be all of
+one type in a single application.  In addition to the standard Vector
+and Matrix classes of type \texttt{DOUBLE} (which defaults to double)
+as in version 1, in version 2 one also has three-dimensional
+structures of any type \texttt{T} at one's disposal. To be more
+precise:
+\begin{itemize}
+\item \texttt{vecmat3::Vector\TT{}} and \texttt{vecmat3::Matrix\TT{}} are
+  three-dimensional vector and matrix classes whose elements are of
+  type \texttt{T}. 
+
+  For example, one can define a 3x3 matrix of integers as\ \ 
+  \texttt{vecmat3::Matrix<int>~m;}
+\item This notation reflects two changes in the code: 
+\begin{itemize}
+\item Almost all of the \texttt{vecmat3} code is now contained in its own
+  namespace called \texttt{vecmat3}. 
+\item The type is a template argument.
+\end{itemize}
+\item In version 2 the standard Vector and Matrix classes are simply
+  typedef'ed as equivalent to \texttt{vecmat3::Vector<DOUBLE>} and
+  \texttt{vecmat3::Vector<DOUBLE>}, whereas in version 1 they were the
+  only vectors and matrices available.
+\item The typedef's of Vector and Matrix will be omitted if the
+  compiler flag \texttt{NOVECMAT3DEF} is defined.
+\end{itemize}
+
+\subsection*{Changes between version 2 and version 2.3}
+
+(Versions 2.1 and 2.2 were internal development stages.)
+
+\begin{itemize}
+\item Most functionality remained the same as in version 2, except that square bracket support has been added. See Section \ref{bracketsnowtoo}.
+
+\item The header file now also enforces inlining the template functions for
+the GNU (tested version 4.4.0) and the Intel compilers (tested
+versions 11 and 12), even when no optimization is used.  
+
+\item A major improvement of version 2.3 is that the library is now
+compatible with IBM's xlC compiler, which had trouble with some
+template constructions in versions 1 and 2. While I'm on the
+subject, one should compile with \texttt{-O4} when using the IBM
+compilers with vecmat3 in order to get all inlining done properly (in
+the latest version, xlC 11, the options \texttt{-O2 -qinline=level=6} suffice).
+\end{itemize}
+
+\subsection*{Changes between version 2.3 and version 2.3.1}
+
+Version 2.3.1 comes with an open-source license (MIT). Here is the
+text of the license:
+\begin{verbatim}
+Copyright (c) 2007-2013 Ramses van Zon
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+\end{verbatim}
+
+\section{Installation}
+
+To use this header-only library, one merely needs to copy the header
+file vecmat3.h to the directory of the source files that include it,
+or to a default directory where the compiler will look for header
+files (e.g. /usr/local/include).
+
+The \emph{vecmat3} library has been tested with the GNU g++ compiler version
+4.4 and up, the Intel C++ compiler version 11 and up and IBM's XL C++
+compiler version 10 and up.
+
+
+\section{Using the \Vector\ and \Matrix\ classes}
+\label{use}
+
+\subsection{Classes}
+
+\emph{vecmat3} provides two general template classes within the
+namespace \texttt{vecmat3}:
+
+\begin{quote}\tt
+  template<typename T> vecmat3::Vector;
+
+  template<typename T> vecmat3::Matrix;
+\end{quote}
+The template parameter T determines the type of the vector and
+matrix elements. Thus, for a vector of integers one uses the type
+\texttt{vecmat3::Vector<int>}, while for a matrix of doubles one would
+use \texttt{vecmat3::Matrix<double>}.
+
+Since applications often need only one type of vector, a default
+vector type a and default matrix type are defined outside the
+\texttt{vecmat3} namespace, as follows
+\begin{quote}\tt
+
+typedef vecmat3::Vector<DOUBLE> Vector;
+
+typedef vecmat3::Matrix<DOUBLE> Matrix;
+\end{quote}
+Here, DOUBLE is a predefined macro that should contain the type of the
+elements of the default vectors and matrices. Thus, \texttt{Vector v;}
+defines a vector with elements of type DOUBLE.
+
+The type DOUBLE can be defined in three ways: 
+\begin{enumerate}
+\item One can write an
+\texttt{\#define DOUBLE <something>} before including the
+\texttt{vecmat3.h} header, with \texttt{<something>} replaced by the
+desired type (e.g.\ \texttt{float} or \texttt{double});
+\item One can give a command line argument to the compiler to define
+  DOUBLE to be \texttt{<something>} (e.g.\ \texttt{-DDOUBLE=float} for
+  g++);
+\item One can do nothing, which makes \texttt{DOUBLE} default to
+\texttt{double}.
+\end{enumerate}
+
+The definition of DOUBLE and the type definition of Vector and Matrix
+in the global namespace does pollute the global namespace, and in many
+cases is not wanted. These definitions are omitted if \texttt{NOVECMAT3DEF} is defined.
+
+\subsection{Header file}
+
+To use \emph{vecmat3}, the following general procedure should be
+followed: 
+
+\begin{itemize}
+  \item If the elements of the vectors and matrices are to have a
+  different type than \texttt{double}, first \texttt{\#define} their type as
+  \texttt{DOUBLE}, e.g.
+  \begin{quote}
+    \tt \#define DOUBLE float
+  \end{quote}
+  The type of the elements of a vector or matrix will be referred to
+  as the ``value type'' in this documentation.
+  \item Include the header file vecmat3.h:
+  \begin{quote}
+    \tt \#include "vecmat3.h"
+  \end{quote}
+
+  \item The class \Vector\ and the class \Matrix\ are now
+  defined and instances these classes can be declared as follows:
+    \begin{quote}\tt
+      Vector a;
+
+      Matrix R;
+    \end{quote}
+    \item One can explicitly use any other value type
+      than DOUBLE type, e.g.
+    \begin{quote}\tt
+      vecmat3::Vector<int> a;
+
+      vecmat3::Matrix<int> R;
+    \end{quote}
+    If vectors and matrices of a specific value type are used a lot in an
+    application, it may be useful to typedef them to a shorter
+    notation, e.g.
+    \begin{quote}\tt
+      typedef vecmat3::Vector<int> intVector;
+
+      typedef vecmat3::Matrix<int> intMatrix;
+
+      intVector b;
+
+      intMatrix S;
+    \end{quote}
+  \item Alternatively, one can have no default global \Vector\ and \Matrix\ class defined, and use only the namespace vecmat3, e.g.
+    \begin{quote}\tt
+      \#define NOVECMAT3DEF
+
+      \#include "vecmat3.h"      
+
+      vecmat3::Vector<double> a;
+
+      vecmat3::Matrix<double> R;
+    \end{quote}
+
+      \item In the above examples, the elements of the vectors and
+        matrices are unspecified, and likely contain garbage. In the
+        next section, it will be explained how to initialize these
+        elements of these
+        classes.
+    \item Note that currently, operations between matrices and vectors
+      of different value types are not supported, even when mathematically
+      this would make sense (such as for \texttt{int} and
+      \texttt{double}). 
+      \item However, it is possible to assign any kind of number to an
+        element of any value type, as long as a (standard)
+        conversion to that type is known to the c++ compiler.  Thus,
+        one may, for instance, assign an integer to an element of a
+        vector, or one may multiply a vector by 2 (i.e., one may write
+        \texttt{2*v} instead of being
+        forced to write \texttt{2.0*v} or \texttt{2.0f*v}).
+\end{itemize}
+
+
+\subsection{Initialization methods}
+
+There are four ways to initialize a \Vector\ or \Matrix, which we will
+discuss by example.  In describing the initialization methods, the
+default Vector and Matrix types will be used; the arbitrary type
+versions \texttt{vecmat3::Vector\TT{}} and
+\texttt{vecmat3::Matrix\TT{}} have the same functionality.
+
+\subsubsection{Initialization through constructor parameters}
+  Example:
+    \begin{quote}\tt
+         Vector a(1.1, 3.0, -4.3);
+
+         Matrix R(1, 2, 3,
+ 
+\ \ \ \ \ \ \ \ \ 4, 5, 6,
+
+\ \ \ \ \ \ \ \ \ 7, 8, 9);
+    \end{quote}
+    defines a \Vector\ \texttt a and \Matrix\ \texttt R with specified
+    elements. Note that the first set of three elements given to
+    \texttt R comprise the top row of \texttt R, the second set of
+    three the middle row and the last set of three the bottom row.
+
+    If fewer than three or nine (for \Vector\ and \Matrix,
+    respectively) number are given, the unspecified elements are set
+    to zero. Thus, one can define a zero \Vector\ and \Matrix\ simply by
+    \begin{quote}\tt
+         Vector a(0);
+
+         Matrix R(0);
+    \end{quote}
+
+  \subsubsection{Initialization through assignment}
+  Example:
+    \begin{quote}\tt
+         Vector b = a;
+
+         Matrix S = R;
+    \end{quote}
+    defines a \Vector\ \texttt b with the same elements as \texttt a,
+    and a \Matrix\ \texttt S with the elements~as~\texttt R. 
+
+    The right hand sides may also be an expression involving \Vector's
+    and Matrices. The allowed expressions are explained in
+    sections \ref{operations} and \ref{expressions}.
+%\newpage
+  \subsubsection{Initialization through a comma separated list}
+  Example:
+    \begin{quote}  \tt
+         Vector a;
+
+	 a = 1.1, 3.0, -4.3;
+
+         Matrix R;
+
+	 R = 1, 2, 3, 
+
+     \ \ \ \ 4, 5, 6, 
+
+     \ \ \ \ 7, 8, 9;
+    \end{quote}  
+    Note: this is the standard construction for \texttt{Blitz++} and
+    \texttt{tvmet}, and is achieved though an overloaded comma
+    operator. Not everybody likes overloading the comma operator,
+    because it may confuse the user (more than the above methods), and
+    it is somewhat less efficient than the method in 3.2.1.
+
+    Furthermore, it is  not possible to use this method in
+    the declaration, i.e., one cannot write \texttt{Vector
+    a=1.1,3.0,-4.3;} since \cxx\ would consider this a
+    declaration of 3.0 and -4.3 as being of type \Vector.
+    
+    If not enough elements are given in the list, the remaining
+    elements are set to zero. Thus, one can write
+    \begin{quote}\tt
+         b = 1;
+    \end{quote}
+    to get the vector (1,0,0), and 
+    \begin{quote}\tt
+         R = 2;
+    \end{quote}
+    to get the matrix $\left(\begin{array}{ccc}2&0&0\\0&0&0\\0&0&0\end{array}\right)$.
+
+  \subsubsection{Initialization through member functions}
+  Example:
+    \begin{quote}\tt
+         Vector a;
+
+	 a.zero();
+
+         Matrix R;
+
+	 R.zero();
+    \end{quote}
+    also define a \Vector\ and \Matrix, respectively, with zero
+    elements.
+    
+\noindent
+    For a \Matrix, there also is a member function {\tt one()} to turn
+    it into an identity matrix:
+    \begin{quote}\tt
+         Matrix S;
+
+	 S.one();
+    \end{quote}
+    Furthermore, one can initialize a \Matrix\ also per row or column, e.g.
+    \begin{quote}\tt
+      R.setRow(0,a);
+
+      R.setRow(1,Vector(0,2,0));
+
+      R.setRow(2,Vector(0,2,-1));
+
+      S.setColumn(0,a);
+
+      S.setColumn(1,Vector(0,2,0));
+
+      S.setColumn(2,Vector(0,2,-1));
+    \end{quote}  
+    Note that rows and columns are numbered from 0 to 2.
+
+
+ \subsubsection{Arrays}
+     Example:
+    \begin{quote}\tt
+         Vector a[3];
+
+         Matrix S[3];
+    \end{quote}
+    Defines arrays of three Vectors and Matrices which are
+    non-initialized. One can initialize these arrays as follows
+    \begin{quote}\tt
+         Vector a[3] = \{ Vector(1,2,3), Vector(3,4,5), Vector(5,6,7) \};
+
+         Matrix S[3] = \{ Matrix(0), Matrix(1,2,3,4,5,6,7,8,9), Matrix(2) \} ;
+    \end{quote}
+
+\subsection{Accessing the elements}
+\label{bracketsnowtoo}
+
+There are three ways to assess the elements of Vectors and Matrices:
+
+\begin{enumerate}
+
+\item Basic elements of Vectors and Matrices are generally accessible using the
+parenthesis notation, i.e., the elements of a  \Vector\ \texttt a are
+\texttt{a(0)}, \texttt{a(1)} and \texttt{a(2)}, while those of a
+\Matrix\ \texttt R are \texttt{R(0,0)}, \texttt{R(0,1)}, \dots
+\texttt{R(2,2)}.
+
+\item Bracket notation can also be used, 
+ i.e., the elements of a  \Vector\ \texttt a are
+\texttt{a[0]}, \texttt{a[1]} and \texttt{a[2]}, while those of a
+\Matrix\ \texttt R are \texttt{R[0][0]}, \texttt{R[0][1]}, \dots
+\texttt{R[2][2]}. Note the double brackets for matrix element access.
+This way, Vector and Matrix objects act as if they are of type \texttt{T[3]} and \texttt{T[3][3]}, respectively. Accessing the matrix elements in this way may be moderately slower than the parenthesis method (depending on the compiler).
+
+\item Another way to access the elements is though the class members
+themselves, i.e., \texttt x, \texttt y and \texttt z for \Vector, and
+\texttt{xx}, \texttt{xy}, \texttt{xz}, \texttt{yx}, \texttt{yy},
+\texttt{yz}, \texttt{zx}, \texttt{zy} and \texttt{zz} for Matrix. This is
+potentially  more efficient, but cannot be used for expressions, i.e.,
+\texttt{(A+B).xx} is not possible, unless one writes \texttt{Matrix(A+B).xx}.
+\end{enumerate}
+Furthermore, the rows and columns of a Matrix can be used as if they
+were vectors as follows
+\begin{quote}\tt
+  Vector v = R.row(1);
+
+  Vector w = R.column(2);
+\end{quote}
+
+
+\subsection{Operators}
+\label{operations}
+
+
+The available algebraic operators for the Vector and Matrix classes
+are summarized in table 1, in which '\Vector\TT' stands for
+'\texttt{const Vector\TT\&}' or a \Vector-valued expression, and '\Matrix\TT'
+stands for '\texttt{const Matrix\TT\&}' or a Matrix\TT-valued expression.
+
+In addition, \texttt{<<} operators are defined for output of Vectors
+and Matrices to \texttt{ostream}s, such that
+\begin{quote}\tt
+  Vector a(1,2,3);
+
+  std::cout << a << endl;
+\end{quote}
+would print the numbers 1, 2 and 3 with just a space in between.
+\begin{quote}\tt
+  Matrix<T> M(1,2,3,4,5,6,7,8,9);
+
+  std::cout << M << endl;
+\end{quote}
+would print a newline, the numbers 1, 2 and 3, another newline, the
+numbers 4, 5 and 6, another newline, the numbers 7, 8 and 9 and
+finally another newline.
+
+\begin{table}[t]\small
+\begin{center}
+\begin{tabular}{|rcl|c|c|rcl|}
+\hline
+ \multicolumn{3}{|c|}{\bf form} & \bf description & \bf example & \multicolumn{3}{c|}{\bf mathematically}\\\hline\hline
+%
+&\texttt{\textcolor{red}-}
+&\texttt{Vector<T>}  
+& negative 
+& \tt c = -a; 
+& $\quad \vec c$&=&$-\vec a$\\
+%
+\texttt{Vector<T>}
+&\textcolor{red}{\texttt +}
+&\texttt{Vector<T>} 
+& add 
+& \tt c = a + b; 
+& $\quad \vec c$&=&$\vec a +\vec b$\\
+%
+\texttt{Vector<T>}
+&\textcolor{red}{\texttt -}
+&\texttt{Vector<T>} 
+& subtract
+& \tt c = a - b;
+& $\quad \vec c$&=&$\vec a -\vec b$\\
+%
+\texttt{T}
+&\textcolor{red}{\texttt *}
+&\texttt{Vector<T>} 
+& multiply with scalar 
+& \tt c = d * a; 
+& $\quad \vec c$&=&$d\,\vec a$\\
+%
+\texttt{Vector<T>}
+&\textcolor{red}{\texttt *} 
+&\texttt{T} 
+& multiply with scalar 
+& \tt c = a * d; 
+& $\quad \vec c$&=&$\vec a\, d$\\
+%
+\texttt{Vector<T>}
+&\textcolor{red}{\texttt /}
+&\texttt{T} 
+& divide by scalar 
+& \tt c = a / d; 
+& $\quad \vec c$&=&$\vec a / d$\\
+%
+\texttt{Vector<T>} 
+&\textcolor{red}{\texttt \^{}} 
+&\texttt{Vector<T>} 
+& cross/outer product$^\dagger$
+& \tt c = a \^{} b; 
+& $\quad \vec c$&=&$\vec a \times \vec b$\\
+%
+\texttt{Vector<T>}
+&\textcolor{red}{\texttt *}
+&\texttt{Vector<T>} 
+& dot/inner product$^\ddagger$
+& \tt d = a * b; 
+& $\quad d$&=&$\vec a \cdot \vec b$\\
+%
+\ \textcolor{red}( \texttt{Vector<T>} 
+&\textcolor{red}{\texttt |}
+& \texttt{Vector<T>} \textcolor{red})
+& dot/inner product$^\ddagger$
+& \tt d = (a|b); 
+& $\quad d$&=&$\vec a \cdot \vec b$\\
+%
+\hline
+%
+&\texttt{\textcolor{red}-}
+&\texttt{Matrix<T>}  
+& negative 
+& \tt T = -S; 
+& $\quad \mathsf T$&=&$-\mathsf S$\\
+%
+\texttt{Matrix<T>}
+&\textcolor{red}{\texttt +}
+&\texttt{Matrix<T>} 
+& add 
+& \tt T = S + R; 
+& $\quad \mathsf T$&=&$\mathsf S +\mathsf R$\\
+%
+\texttt{Matrix<T>}
+&\textcolor{red}{\texttt -}
+&\texttt{Matrix<T>} 
+& subtract
+& \tt T = S - R;
+& $\quad \mathsf T$&=&$\mathsf S -\mathsf R$\\
+%
+\texttt{T}
+&\textcolor{red}{\texttt *}
+&\texttt{Matrix<T>} 
+& multiply with scalar 
+& \tt T = d * S; 
+& $\quad \mathsf T$&=&$d\,\mathsf S$\\
+%
+\texttt{Matrix<T>} 
+&\textcolor{red}{\texttt *} 
+&\texttt{T} 
+& multiply with scalar 
+& \tt T = S * d; 
+& $\quad \mathsf T$&=&$\mathsf S\, d$\\
+%
+\texttt{Matrix<T>} 
+&\textcolor{red}{\texttt /} 
+&\texttt{T} 
+& divide by scalar 
+& \tt T = S / d; 
+& $\quad \mathsf T$&=&$\mathsf S / d$\\
+%
+\texttt{Matrix<T>}
+&\textcolor{red}{\texttt *}
+&\texttt{Matrix<T>} 
+& matrix-matrix product
+& \tt T = S * R; 
+& $\quad \mathsf T$&=&$\mathsf S\,\mathsf R$\\
+%
+\texttt{Matrix<T>}
+&\textcolor{red}{\texttt *} 
+&\texttt{Vector<T>} 
+& matrix-vector product
+& \tt c = S * a; 
+& $\quad \vec c$&=&$\mathsf S \, \vec a$\\
+%
+\hline
+%
+\texttt{Vector<T>}
+&\textcolor{red}{\texttt{+=}}
+&\texttt{Vector<T>} 
+& add 
+& \tt c += b; 
+& $\quad \vec c$&=&$\vec c +\vec b$\\
+%
+ \texttt{Vector<T>}
+&\texttt{\textcolor{red}{-=}}
+&\texttt{Vector<T>} 
+& subtract 
+& \tt c -= b; 
+& $\quad \vec c$&=&$\vec c -\vec b$\\
+%
+\texttt{Vector<T>}
+&\texttt{\textcolor{red}{*=}}
+&\texttt{T} 
+& multiply by scalar
+& \tt c *= d; 
+& $\quad \vec c$&=&$d\,\vec c$\\
+%
+\texttt{Vector<T>}
+&\texttt{\textcolor{red}{/=}}
+&\texttt{T} 
+& divide by scalar
+& \tt c /= d; 
+& $\quad \vec c$&=&$\vec c/d$\\
+%
+\texttt{Matrix<T>}
+&\texttt{\textcolor{red}{+=}}
+&\texttt{ Matrix<T>} 
+& add 
+& \tt T += R; 
+& $\quad \mathsf T$&=&$\mathsf T +\mathsf R$\\
+%
+ \texttt{Matrix<T>}
+&\texttt{\textcolor{red}{-=}}
+&\texttt{ Matrix<T>} 
+& subtract 
+& \tt T -= R; 
+& $\quad \mathsf T$&=&$\mathsf T -\mathsf R$\\
+%
+\texttt{Matrix<T>}&
+\texttt{\textcolor{red}{*=}}
+&\texttt{T} 
+& multiply by scalar
+& \tt T *= d; 
+& $\quad \mathsf T$&=&$d\,\mathsf T$\\
+%
+ \texttt{Matrix<T>}
+&\texttt{\textcolor{red}{/=}}
+&\texttt{T} 
+& divide by scalar
+& \tt T /= d; 
+& $\quad \mathsf T$&=&$\mathsf T/d$\\
+\hline
+\multicolumn{6}{l}{
+$^\dagger$ The \texttt \^{} operator has rather low precedence, so
+often one has to write \texttt{(a\^{}b)}.
+}\\\multicolumn{6}{l}{
+$^\ddagger$ Two operators are provided for the dot product, which do
+the exact same thing. 
+}
+\end{tabular}
+\end{center}
+\caption{Operators available for matrices and
+  vectors with elements of type \texttt{T}. }
+\end{table}
+
+
+
+\subsection{Member functions}
+
+For any \Vector, or \Vector-valued expression, or for any \Matrix, or
+\Matrix-valued expression, the following properties are available as
+member functions. Note that below, {\tt T} stands for the typename of the template, while {\tt Vector\TT{}} and {\tt Matrix\TT{}} stand for {\tt vecmat3::Vector\TT{}} and {\tt vecmat3::Matrix\TT{}}, respectively.  The examples all use {\tt T=DOUBLE}.
+
+\subsubsection{T nrm2()}
+
+This returns the sum of the squares of the elements, which is its norm
+squared. E.g., with {\tt T=DOUBLE},
+\begin{quote} \tt
+  Vector a(1,2,3.316625);
+
+  Matrix R(1,2,0,
+
+\ \ \ \ \ \ \ \ \ 2,0,2
+	   
+\ \ \ \ \ \ \ \	\ 1,1,1);
+
+  DOUBLE d1 = a.nrm2(); // will be equal to 16.0000014
+
+  DOUBLE d2 = R.nrm2(); // will be equal to 16
+\end{quote}
+
+\subsubsection{T nrm()}
+
+This returns the norm of a \Vector\ or \Matrix, e.g., with {\tt T=DOUBLE},
+\begin{quote} \tt
+  DOUBLE d3 = a.nrm(); // will be equal to 4.00000017
+
+  DOUBLE d4 = R.nrm(); // will be equal to 4
+\end{quote}
+
+\noindent
+The following properties are for Matrices only:
+
+\subsubsection{T tr()}
+
+This returns the trace of a \Matrix, i.e., the sum of its diagonal
+elements. E.g., with {\tt T=DOUBLE},
+\begin{quote} \tt
+  DOUBLE d5 = R.tr(); // will be equal to 2
+\end{quote}
+
+\subsubsection{T det()}
+
+This returns the determinant of a \Matrix, e.g., with {\tt T=DOUBLE},
+\begin{quote} \tt
+  DOUBLE d6 = R.det(); // will be equal to -2
+\end{quote}
+
+\subsubsection{Vector\TT{} row(int i)}
+This returns the ith row of a \Matrix.
+
+\subsubsection{Vector\TT{} column(int j)}
+
+This returns the jth column of a \Matrix.
+
+\pagebreak[3]
+\subsection{Non-member functions}
+
+In the definition of the following non-member functions, the specified
+return type are effective ones. E.g. a return type of Matrix may
+return a Matrix-Expression when this is more efficient. In any case, it
+can be treated as a Matrix in virtually all ways. Likewise, if an
+argument is of Matrix type, a Matrix expression is also allowed.
+
+\subsubsection{Matrix\TT{} Transpose(const Matrix\TT{} \& M)}
+
+Returns the transpose of the argument, which is a \Matrix, e.g.
+\begin{quote}\tt
+  Matrix S = Transpose(R);
+\end{quote}
+
+\subsubsection{Matrix\TT{} Inverse(const Matrix\TT{} \& M)}
+
+Returns the inverse of the argument, which is a \Matrix, e.g.
+\begin{quote}\tt
+  Matrix S = Inverse(R);
+\end{quote}
+
+\subsubsection{Matrix\TT{} Rodrigues(const Vector\TT{} \& v)}
+
+Returns the \Matrix-valued rotation matrix for a rotation along the
+axis given by the direction of the \Vector\ argument, with the angle
+equal to the norm of that \Vector, e.g.
+\begin{quote}\tt
+  Matrix S = Rodrigues(a);
+\end{quote}
+
+
+\subsubsection{Matrix\TT{} Dyadic(const Vector\TT{} \& a, const Vector\TT{} \& b)}
+
+Returns the \Matrix-valued dyadic product of two arguments which are
+\Vector s, e.g.
+\begin{quote}\tt
+  Matrix S = Dyadic(a,b);
+\end{quote}
+
+
+\subsubsection{Vector\TT{} MTVmult(const Matrix\TT{} \& M, const Vector\TT{} \& v)}
+
+This simply returns Transpose(Matrix)*Vector. 
+
+\subsubsection{T dist(const Vector\TT{} \& a, const Vector\TT{} \& b)}
+
+Returns the length of the difference vector between a and b. This is a
+remnant of earlier versions of the \Vector and \Matrix classes, and
+barely if at all more efficient than \texttt{(a-b).nrm()}.
+
+\subsubsection{T dist2(const Vector\TT{} \& a, const Vector\TT{} \& b)}
+
+Returns the square length of the difference vector between a and
+b. This is a remnant of earlier versions of the Vector and Matrix
+classes, and barely if at all more efficient than \texttt{(a-b).nrm2()}.  
+
+\subsubsection{T distwithshift(const Vector\TT{}\&a,const Vector\TT{}\&b,const Vector\TT{}\&s)}
+
+Returns the length of the difference vector between a and b shifted by
+s. This is a remnant of earlier versions of the vector and Matrix
+classes, and barely if at all more efficient than \texttt{(a+s-b).nrm()}.
+
+
+\vspace{1cm}\pagebreak[3]
+Finally, because the notation \texttt{a*b} and \texttt{a\^{}b} for dot and
+cross product may be confusing, the following equivalent alternatives
+are defined:
+\nopagebreak
+\subsubsection{T dotProduct(const Vector\TT{} \& a, const Vector\TT{} \& b)}
+
+Returns the DOUBLE which is the dot, or inner, product of the two
+\Vector\ arguments.  It is by definition equal to
+\texttt{(\texttt{Vector}|\texttt{Vector})}.
+Example, with {\tt T=DOUBLE}:
+\begin{quote}\tt
+  DOUBLE d = dotProduct(a,b);
+\end{quote}
+
+\subsubsection{Vector\TT{} crossProduct(const Vector\TT{} \& a, const Vector\TT{} \& b)}
+
+Returns the \Vector\ which is the cross, or outer, product of the two
+\Vector\ arguments.  It is by definition equal to
+\texttt{(\texttt{Vector}\^{}\texttt{Vector})}.
+Example:
+\begin{quote}\tt
+  Vector c = crossProduct(a,b);
+\end{quote}
+
+
+\section{Expressions}
+\label{expressions}
+
+Using the above elementary operations and functions, complex
+expressions can be constructed just as for built-in type such as
+\texttt{double}. To be more specific, for all operator expressions in table 1
+on page 8, the arguments can be expressions themselves.
+
+For example, one can write,
+\begin{quote}\tt
+  Vector r[2] = \{ Vector(1,4,5), Vector(2,3,4) \};
+
+  Vector v[2] = \{ Vector(1,0,0), Vector(-1,0,0) \};
+
+  Vector s(7,1,0);
+
+  Matrix A(1,0,0,0,1,0,0,-1,0);
+
+  DOUBLE t =  (r[0]+2*A*(s\^{}r[1]) ) | (v[1]-v[0]);
+
+  // alternatively:
+
+  //DOUBLE t =  dotProduct(r[0]+2*A*crossProduct(s,r[1]), v[1]-v[0]);
+\end{quote}
+
+Internally, the expressions are not computed directly via temporaries,
+but are computed only upon assignment. As a result, the definitions of
+these operators and functions in vecmat3.h is not as simple as
+e.g. \texttt{Vector operator+(Vector\&,Vector\&)}.  For that reason,
+above we used \texttt{Vector} and \texttt{Matrix} wherever a
+\Vector/\Matrix\ or a \Vector/\Matrix\ expression can occur. Never
+mind the implementation though, things work as expected.
+
+\newpage
+\renewcommand{\refname}{Background references}
+\begin{thebibliography}{9}
+\bibitem{Lippmann}  
+T. Veldhuizen, \emph{Expression Templates} C++ Report, Vol. 7 No. 5 June
+1995, pp. 26-31. See also
+http://ubiety.uwaterloo.ca/\~{}tveldhui/papers/Expression-Templates/exprtmpl.html.\\
+Reprinted in:
+S. B. Lippmann (ed.) \emph{C++ Gems} (Cambridge
+  University Press, 1998).
+\bibitem{VandevoordeJosuttis} D.\ Vandevoorde and N.\ M.\ Josuttis,
+  \emph{C++ Templates: The Complete Guide} (Addison-Wesley, Boston,
+  2002).
+\bibitem{blitz} http://www.oonumerics.org/blitz
+\bibitem{tvmet} http://tvmet.sourceforge.net
+\end{thebibliography}
+\addcontentsline{toc}{section}{\refname}
+
+
+
+\end{document}
