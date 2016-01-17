@@ -147,9 +147,9 @@ namespace vecmat3 {
         {
             // No (this!=&m) clause is needed because this is a default vector,
             // and the default vector case is specialized below.
-            T yValue = v.eval<1>();
-            T zValue = v.eval<2>();
-            x = v.eval<0>();
+            T yValue = v.template eval<1>();
+            T zValue = v.template eval<2>();
+            x = v.template eval<0>();
             y = yValue;
             z = zValue;
             return *this;
@@ -213,9 +213,9 @@ namespace vecmat3 {
         EXPRESSION_TEMPLATE_MEMBER 
         INLINE Vector<TT>& operator+= ( const VECTOR& v )
         {
-            T yValue = v.eval<1>();
-            T zValue = v.eval<2>();
-            x += v.eval<0>();
+            T yValue = v.template eval<1>();
+            T zValue = v.template eval<2>();
+            x += v.template eval<0>();
             y += yValue;
             z += zValue;
             return *this;
@@ -223,9 +223,9 @@ namespace vecmat3 {
         EXPRESSION_TEMPLATE_MEMBER 
         INLINE Vector<TT>& operator-= ( const VECTOR& v )
         {
-            T yValue = v.eval<1>();
-            T zValue = v.eval<2>();        
-            x -= v.eval<0>();
+            T yValue = v.template eval<1>();
+            T zValue = v.template eval<2>();        
+            x -= v.template eval<0>();
             y -= yValue;
             z -= zValue;
             return *this;
@@ -604,7 +604,7 @@ namespace vecmat3 {
     template <typename T> 
     EXPRESSION_TEMPLATE_MEMBER 
     INLINE Vector<TT>::Vector(const VECTOR& v) :
-      x(v.eval<0>()), y(v.eval<1>()), z(v.eval<2>())
+      x(v.template eval<0>()), y(v.template eval<1>()), z(v.template eval<2>())
     {}
 
     //
@@ -994,7 +994,7 @@ namespace vecmat3 {
     template <int I> 
     INLINE T CLASS::eval() const 
     { 
-        return l->eval<I>() + r->eval<I>(); 
+        return l->template eval<I>() + r->template eval<I>(); 
     }
 
     #undef CLASS
@@ -1018,7 +1018,7 @@ namespace vecmat3 {
     template <int I> 
     INLINE T CLASS::eval() const 
     {
-        return l->eval<I>() - r->eval<I>(); 
+        return l->template eval<I>() - r->template eval<I>(); 
     }
 
     #undef CLASS
@@ -1044,13 +1044,13 @@ namespace vecmat3 {
     {
        switch (I) {
           case 0:
-             return l->eval<1>() * r->eval<2>() - l->eval<2>() * r->eval<1>();
+             return l->template eval<1>() * r->template eval<2>() - l->template eval<2>() * r->template eval<1>();
              break;
           case 1:
-             return l->eval<2>() * r->eval<0>() - l->eval<0>() * r->eval<2>();
+             return l->template eval<2>() * r->template eval<0>() - l->template eval<0>() * r->template eval<2>();
              break;
           case 2:
-             return l->eval<0>() * r->eval<1>() - l->eval<1>() * r->eval<0>();
+             return l->template eval<0>() * r->template eval<1>() - l->template eval<1>() * r->template eval<0>();
              break;
           default: 
              return 0;
@@ -1096,7 +1096,7 @@ namespace vecmat3 {
     EXPRESSION_TEMPLATE 
     template <int I> INLINE T CLASS::eval() const 
     {
-        return l->eval<I>() * r; 
+        return l->template eval<I>() * r; 
     }
 
     #undef CLASS
@@ -1120,7 +1120,7 @@ namespace vecmat3 {
     template <int I> 
     INLINE T CLASS::eval() const 
     {
-        return - l->eval<I>();
+        return - l->template eval<I>();
     }
 
     #undef CLASS
@@ -1145,7 +1145,7 @@ namespace vecmat3 {
     template <int I,int J> 
     INLINE T CLASS::eval() const 
     { 
-       return l->eval<I,J>() + r->eval<I,J>(); 
+       return l->template eval<I,J>() + r->template eval<I,J>(); 
     }
 
     #undef CLASS
@@ -1170,7 +1170,7 @@ namespace vecmat3 {
     template <int I,int J> 
     INLINE T CLASS::eval() const 
     { 
-       return l->eval<I,J>() - r->eval<I,J>(); 
+       return l->template eval<I,J>() - r->template eval<I,J>(); 
     }
 
     #undef CLASS
@@ -1202,7 +1202,7 @@ namespace vecmat3 {
     template <int I,int J> 
     INLINE T CLASS::eval() const 
     { 
-       return l->eval<I,J>() * r; 
+       return l->template eval<I,J>() * r; 
     }
 
     EXPRESSION_TEMPLATE 
@@ -1242,9 +1242,9 @@ namespace vecmat3 {
     template <int I, int J> 
     INLINE T CLASS::eval() const 
     {
-       return l->eval<I,0>() * r->eval<0,J>()
-          + l->eval<I,1>() * r->eval<1,J>()
-          + l->eval<I,2>() * r->eval<2,J>();
+       return l->template eval<I,0>() * r->template eval<0,J>()
+          + l->template eval<I,1>() * r->template eval<1,J>()
+          + l->template eval<I,2>() * r->template eval<2,J>();
     }
 
     #undef CLASS
@@ -1268,7 +1268,7 @@ namespace vecmat3 {
     template <int I, int J> 
     INLINE T CLASS::eval() const 
     {
-       return - r->eval<I,J>();
+       return - r->template eval<I,J>();
     }
 
     #undef CLASS
@@ -1292,7 +1292,7 @@ namespace vecmat3 {
     template <int I, int J> 
     INLINE T CLASS::eval() const 
     {
-       return l->eval<J,I>();
+       return l->template eval<J,I>();
     }
 
     #undef CLASS
@@ -1317,7 +1317,7 @@ namespace vecmat3 {
     template <int I, int J> 
     INLINE T CLASS::eval() const 
     {
-       return l->eval<I>() * r->eval<J>();
+       return l->template eval<I>() * r->template eval<J>();
     }
 
     #undef CLASS
@@ -1343,9 +1343,9 @@ namespace vecmat3 {
     INLINE T CLASS::eval() const 
     {
        switch(i) {
-          case 0: return l->eval<0,J>();
-          case 1: return l->eval<1,J>();
-          case 2: return l->eval<2,J>();
+          case 0: return l->template eval<0,J>();
+          case 1: return l->template eval<1,J>();
+          case 2: return l->template eval<2,J>();
           default: return 0;
        }
     }
@@ -1373,9 +1373,9 @@ namespace vecmat3 {
     INLINE T CLASS::eval() const 
     {
         switch(j) {
-        case 0: return l->eval<I,0>();
-        case 1: return l->eval<I,1>();
-        case 2: return l->eval<I,2>();
+        case 0: return l->template eval<I,0>();
+        case 1: return l->template eval<I,1>();
+        case 2: return l->template eval<I,2>();
         default: return 0;
         }
     }
@@ -1402,9 +1402,9 @@ namespace vecmat3 {
     template <int I> 
     INLINE T CLASS::eval() const 
     {
-       return l->eval<I,0>() * r->eval<0>()
-          + l->eval<I,1>() * r->eval<1>()
-          + l->eval<I,2>() * r->eval<2>();
+       return l->template eval<I,0>() * r->template eval<0>()
+          + l->template eval<I,1>() * r->template eval<1>()
+          + l->template eval<I,2>() * r->template eval<2>();
     }
 
     #undef CLASS
